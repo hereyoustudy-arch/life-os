@@ -31,6 +31,33 @@
             box-sizing: border-box;
         }
 
+        /* ЭКРАН АВТОРИЗАЦИИ */
+        #auth-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: var(--bg-main);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+        #auth-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .auth-card {
+            background: var(--bg-card);
+            backdrop-filter: var(--blur);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: var(--shadow);
+            max-width: 360px;
+            width: 100%;
+            text-align: center;
+        }
+        .auth-card h2 { margin-bottom: 1.5rem; font-size: 1.5rem; letter-spacing: 1px; }
+        .auth-error { color: #ef4444; font-size: 0.85rem; margin-top: 10px; display: none; }
+
         .layout-grid {
             display: grid;
             grid-template-columns: 1fr 340px;
@@ -38,11 +65,9 @@
             max-width: 1200px;
             width: 100%;
         }
+        .layout-grid.hidden { display: none !important; }
 
-        .main-content {
-            position: relative;
-        }
-
+        .main-content { position: relative; }
         .card {
             background: var(--bg-card);
             backdrop-filter: var(--blur);
@@ -53,7 +78,6 @@
             box-shadow: var(--shadow);
         }
 
-        /* КНОПКА ВЕРНУТЬСЯ ВНУТРИ ОКНА */
         .back-nav {
             background: rgba(125, 125, 125, 0.08);
             border: 1px solid var(--border-color);
@@ -76,12 +100,8 @@
             color: var(--accent);
         }
 
-        .hub-window {
-            display: block;
-        }
-        .hub-window.hidden {
-            display: none !important;
-        }
+        .hub-window { display: block; }
+        .hub-window.hidden { display: none !important; }
 
         .selector-grid {
             display: grid;
@@ -107,14 +127,9 @@
             transform: translateY(-3px);
         }
 
-        .app-window {
-            display: none;
-        }
-        .app-window.active {
-            display: block;
-        }
+        .app-window { display: none; }
+        .app-window.active { display: block; }
 
-        /* СТИЛЬ И ПОДСВЕТКА ДЛЯ ВСЕХ ПОЛЕЙ ВВОДА ПРИ ВЫБОРЕ */
         input, textarea, select {
             padding: 0.7rem;
             border-radius: 10px;
@@ -127,15 +142,12 @@
             outline: none;
             transition: all 0.25s ease;
         }
-
-        /* ЭФФЕКТ ВЫБОРА (ФОКУСА) */
         input:focus, textarea:focus, select:focus {
             border-color: var(--accent);
             background: rgba(0, 0, 0, 0.4);
             box-shadow: 0 0 0 4px var(--accent-glow);
         }
 
-        /* Для красивого отображения иконки календаря в инпутах даты */
         input[type="date"]::-webkit-calendar-picker-indicator {
             cursor: pointer;
             filter: invert(0.8);
@@ -147,7 +159,6 @@
         .status-badge { text-align: center; font-size: 0.8rem; font-weight: 600; padding: 5px; border-radius: 30px; background: #ef4444; color: white; margin-bottom: 15px;}
         .status-badge.online { background: #10b981; }
 
-        /* Форматирование Bento & Списков */
         .overview-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
         .bento-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .bento-item { background: rgba(125, 125, 125, 0.04); border: 1px solid var(--border-color); padding: 14px; border-radius: 12px; display: flex; flex-direction: column; gap: 4px; }
@@ -169,6 +180,7 @@
         .item-time { font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 4px; }
         .expense-row { display: flex; justify-content: space-between; }
         .expense-amount { font-weight: bold; color: #f59e0b; }
+        .completed { text-decoration: line-through; color: var(--text-muted); }
         
         button.btn-action { background: var(--text-main); color: var(--bg-main); font-weight: 600; padding: 11px; border-radius: 8px; border: none; cursor: pointer; width: 100%; margin-top: 10px; }
         .row-form { display: flex; gap: 10px; margin-top: 12px; }
@@ -177,11 +189,21 @@
 </head>
 <body>
 
-    <div class="layout-grid">
+    <div id="auth-screen">
+        <div class="auth-card">
+            <h2>LIFE OS SECURE</h2>
+            <form id="authForm">
+                <input type="password" id="passwordInput" placeholder="Введите мастер-пароль" required autofocus>
+                <button type="submit" class="btn-action">Открыть систему</button>
+                <div id="authError" class="auth-error">Ошибка подключения к системе!</div>
+            </form>
+        </div>
+    </div>
+
+    <div class="layout-grid hidden" id="mainLayout">
         <div class="main-content">
             <div id="status" class="status-badge">Синхронизация...</div>
 
-            <!-- ОКНО ХАБА -->
             <div id="window-hub" class="card hub-window">
                 <h2>Центр управления Life OS</h2>
                 <div class="selector-grid">
@@ -192,7 +214,6 @@
                 </div>
             </div>
 
-            <!-- ОКНО ЗАДАЧ -->
             <div id="window-tasks" class="card app-window">
                 <button class="back-nav" onclick="returnToHub()"><i data-lucide="arrow-left"></i>Назад</button>
                 <h3>Реестр задач и целей</h3>
@@ -227,7 +248,6 @@
                 <ul id="taskList"></ul>
             </div>
 
-            <!-- ОКНО ПРИВЫЧЕК -->
             <div id="window-habits" class="card app-window">
                 <button class="back-nav" onclick="returnToHub()"><i data-lucide="arrow-left"></i>Назад</button>
                 <h3>Трекер полезных привычек</h3>
@@ -238,7 +258,6 @@
                 <ul id="habitList"></ul>
             </div>
 
-            <!-- ОКНО ДНЕВНИКА -->
             <div id="window-logs" class="card app-window">
                 <button class="back-nav" onclick="returnToHub()"><i data-lucide="arrow-left"></i>Назад</button>
                 <h3>Логгер воспоминаний и событий</h3>
@@ -249,20 +268,18 @@
                 <ul id="logList"></ul>
             </div>
 
-            <!-- ОКНО РАСХОДОВ -->
             <div id="window-expenses" class="card app-window">
                 <button class="back-nav" onclick="returnToHub()"><i data-lucide="arrow-left"></i>Назад</button>
                 <h3>Финансовый учет (сум)</h3>
                 <form id="expenseForm" class="finance-form">
                     <input type="number" id="expenseAmount" placeholder="Сумма" required>
                     <input type="text" id="expenseCategory" placeholder="Категория" required>
-                    <button type="button" class="btn-action" style="margin:0;">Учесть</button>
+                    <button type="submit" class="btn-action" style="margin:0;">Учесть</button>
                 </form>
                 <ul id="expenseList"></ul>
             </div>
         </div>
 
-        <!-- САЙДБАР OVERVIEW -->
         <div class="sidebar">
             <div class="card">
                 <div class="overview-title"><i data-lucide="layout-dashboard"></i>Today's Overview</div>
@@ -278,8 +295,50 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:5000';
+        // Использование относительного пути для стабильной работы бэкенда на Render
+        const API_URL = '';
         let allTasks = []; let allHabits = []; let allLogs = []; let allExpenses = [];
+
+        // ОБРАБОТКА АВТОРИЗАЦИИ
+        document.getElementById('authForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const password = document.getElementById('passwordInput').value;
+            const errorDiv = document.getElementById('authError');
+            
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('auth-screen').classList.add('hidden');
+                    document.getElementById('mainLayout').classList.remove('hidden');
+                    
+                    // Запуск проверки соединения после успешного входа
+                    checkServerConnection();
+                } else {
+                    errorDiv.textContent = 'Неверный мастер-пароль!';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Ошибка подключения к системе!';
+                errorDiv.style.display = 'block';
+            }
+        });
+
+        function checkServerConnection() {
+            fetch(`${API_URL}/status`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const b = document.getElementById('status'); b.textContent = 'Life OS Connected'; b.classList.add('online');
+                        loadAllData();
+                    }
+                }).catch(() => { document.getElementById('status').textContent = 'Режим офлайн'; });
+        }
 
         function openModule(moduleName) {
             document.getElementById('window-hub').classList.add('hidden');
@@ -298,15 +357,6 @@
             document.getElementById('parentTaskId').required = e.target.checked;
         });
 
-        fetch(`${API_URL}/status`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    const b = document.getElementById('status'); b.textContent = 'Life OS Connected'; b.classList.add('online');
-                    loadAllData();
-                }
-            }).catch(() => { document.getElementById('status').textContent = 'Режим офлайн'; });
-
         function loadAllData() {
             Promise.all([
                 fetch(`${API_URL}/tasks`).then(r => r.json()),
@@ -316,7 +366,7 @@
             ]).then(([tData, hData, lData, eData]) => {
                 allTasks = tData.tasks || []; allHabits = hData.habits || []; allLogs = lData.logs || []; allExpenses = eData.expenses || [];
                 render();
-            });
+            }).catch(err => console.error('Ошибка загрузки данных:', err));
         }
 
         function render() {
