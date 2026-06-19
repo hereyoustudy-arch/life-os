@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life OS</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-main: #090d16;
+            --bg-card: rgba(22, 28, 45, 0.6);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.25);
+            --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            --blur: blur(12px);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .layout-grid {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 40px;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .main-content {
+            position: relative;
+        }
+
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: var(--blur);
+            -webkit-backdrop-filter: var(--blur);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        /* КНОПКА ВЕРНУТЬСЯ ВНУТРИ ОКНА */
+        .back-nav {
+            background: rgba(125, 125, 125, 0.08);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 20px;
+            width: fit-content;
+            transition: all 0.2s ease;
+        }
+        .back-nav:hover {
+            background: rgba(125, 125, 125, 0.15);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .hub-window {
+            display: block;
+        }
+        .hub-window.hidden {
+            display: none !important;
+        }
+
+        .selector-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+            margin-top: 25px;
+        }
+        .selector-card {
+            background: rgba(125, 125, 125, 0.04);
+            border: 1px solid var(--border-color);
+            padding: 24px;
+            border-radius: 16px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            transition: all 0.25s ease;
+        }
+        .selector-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-3px);
+        }
+
+        .app-window {
+            display: none;
+        }
+        .app-window.active {
+            display: block;
+        }
+
+        /* СТИЛЬ И ПОДСВЕТКА ДЛЯ ВСЕХ ПОЛЕЙ ВВОДА ПРИ ВЫБОРЕ */
+        input, textarea, select {
+            padding: 0.7rem;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.25);
+            color: var(--text-main);
+            font-size: 0.9rem;
+            width: 100%;
+            box-sizing: border-box;
+            outline: none;
+            transition: all 0.25s ease;
+        }
+
+        /* ЭФФЕКТ ВЫБОРА (ФОКУСА) */
+        input:focus, textarea:focus, select:focus {
+            border-color: var(--accent);
+            background: rgba(0, 0, 0, 0.4);
+            box-shadow: 0 0 0 4px var(--accent-glow);
+        }
+
+        /* Для красивого отображения иконки календаря в инпутах даты */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            filter: invert(0.8);
+        }
+        input[type="date"]:focus::-webkit-calendar-picker-indicator {
+            filter: invert(1) sepia(1) saturate(5) hue-rotate(175deg);
+        }
+
+        .status-badge { text-align: center; font-size: 0.8rem; font-weight: 600; padding: 5px; border-radius: 30px; background: #ef4444; color: white; margin-bottom: 15px;}
+        .status-badge.online { background: #10b981; }
+
+        /* Форматирование Bento & Списков */
+        .overview-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .bento-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .bento-item { background: rgba(125, 125, 125, 0.04); border: 1px solid var(--border-color); padding: 14px; border-radius: 12px; display: flex; flex-direction: column; gap: 4px; }
+        .bento-label { font-size: 0.75rem; color: var(--text-muted); }
+        .bento-value { font-size: 1.4rem; font-weight: 700; }
+        .bento-full { grid-column: span 2; }
+        .quote-box { font-size: 0.85rem; font-style: italic; color: var(--text-muted); border-left: 2px solid var(--accent); padding-left: 10px; margin-top: 14px; }
+        
+        .task-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+        .full-width { grid-column: span 2; }
+        .subtask-toggle-container { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text-muted); }
+        .subtask-toggle-container input { width: auto; }
+        
+        ul { list-style: none; padding: 0; margin: 20px 0 0 0; }
+        li { background: rgba(125, 125, 125, 0.03); padding: 12px; border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border-color); }
+        li.subtask-item { margin-left: 24px; border-left: 2px solid var(--accent); }
+        .badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase; background: rgba(125, 125, 125, 0.12); margin-right: 5px; }
+        .task-notes { font-size: 0.8rem; color: var(--text-muted); background: rgba(0,0,0,0.15); padding: 6px; border-radius: 6px; margin-top: 5px; }
+        .item-time { font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 4px; }
+        .expense-row { display: flex; justify-content: space-between; }
+        .expense-amount { font-weight: bold; color: #f59e0b; }
+        
+        button.btn-action { background: var(--text-main); color: var(--bg-main); font-weight: 600; padding: 11px; border-radius: 8px; border: none; cursor: pointer; width: 100%; margin-top: 10px; }
+        .row-form { display: flex; gap: 10px; margin-top: 12px; }
+        .finance-form { display: grid; grid-template-columns: 1fr 2fr auto; gap: 10px; margin-top: 12px; }
+    </style>
+</head>
+<body>
+
+    <div class="layout-grid">
+        <div class="main-content">
+            <div id="status" class="status-badge">Синхронизация...</div>
+
+            <!-- ОКНО ХАБА -->
+            <div id="window-hub" class="card hub-window">
+                <h2>Центр управления Life OS</h2>
+                <div class="selector-grid">
+                    <div class="selector-card" onclick="openModule('tasks')"><i data-lucide="check-square"></i><span>Задачи</span></div>
+                    <div class="selector-card" onclick="openModule('habits')"><i data-lucide="activity"></i><span>Привычки</span></div>
+                    <div class="selector-card" onclick="openModule('logs')"><i data-lucide="book-open"></i><span>Дневник</span></div>
+                    <div class="selector-card" onclick="openModule('expenses')"><i data-lucide="wallet"></i><span>Расходы</span></div>
+                </div>
+            </div>
+
+            <!-- ОКНО ЗАДАЧ -->
+            <div id="window-tasks" class="card app-window">
+                <button class="back-nav" onclick="returnToHub()"><i data-lucide="arrow-left"></i>Назад</button>
+                <h3>Реестр задач и целей</h3>
+                <form id="todoForm">
+                    <input type="text" id="taskInput" placeholder="Что планируете сделать?" required>
+                    <div class="task-meta-grid">
+                        <select id="taskPeriod">
+                            <option value="today">На Сегодня</option>
+                            <option value="tomorrow">На Завтра</option>
+                            <option value="week">На Неделю</option>
+                        </select>
+                        <select id="taskCategory">
+                            <option value="Личное">Личное</option>
+                            <option value="Работа">Работа</option>
+                            <option value="Учёба">Учёба</option>
+                            <option value="Семья">Семья</option>
+                        </select>
+                        <select id="taskPriority" class="full-width">
+                            <option value="low">Низкий</option>
+                            <option value="medium" selected>Средний</option>
+                            <option value="high">Высокий</option>
+                        </select>
+                        <div class="subtask-toggle-container full-width">
+                            <input type="checkbox" id="isSubtask">
+                            <label for="isSubtask">Сделать подзадачей для:</label>
+                            <select id="parentTaskId" disabled><option value="">-- Выберите задачу --</option></select>
+                        </div>
+                        <textarea id="taskNotes" class="full-width" placeholder="Заметки..."></textarea>
+                    </div>
+                    <button type="submit" class="btn-action">Зафиксировать задачу</button>
+                </form>
+                <ul id="taskList"></ul>
+            </div>
+
+            <!-- ОКНО ПРИВЫЧЕК -->
+            <div id="window-habits" class="card app-window">
+                <button class="back-nav" onclick="returnToHub()"><i data-lucide="arrow-left"></i>Назад</button>
+                <h3>Трекер полезных привычек</h3>
+                <form id="habitForm" class="row-form">
+                    <input type="text" id="habitInput" placeholder="Новая привычка..." required>
+                    <button type="submit" class="btn-action" style="margin:0; width:auto;">Создать</button>
+                </form>
+                <ul id="habitList"></ul>
+            </div>
+
+            <!-- ОКНО ДНЕВНИКА -->
+            <div id="window-logs" class="card app-window">
+                <button class="back-nav" onclick="returnToHub()"><i data-lucide="arrow-left"></i>Назад</button>
+                <h3>Логгер воспоминаний и событий</h3>
+                <form id="logForm">
+                    <textarea id="logInput" placeholder="Мысли или итоги дня..." required></textarea>
+                    <button type="submit" class="btn-action">Сохранить</button>
+                </form>
+                <ul id="logList"></ul>
+            </div>
+
+            <!-- ОКНО РАСХОДОВ -->
+            <div id="window-expenses" class="card app-window">
+                <button class="back-nav" onclick="returnToHub()"><i data-lucide="arrow-left"></i>Назад</button>
+                <h3>Финансовый учет (сум)</h3>
+                <form id="expenseForm" class="finance-form">
+                    <input type="number" id="expenseAmount" placeholder="Сумма" required>
+                    <input type="text" id="expenseCategory" placeholder="Категория" required>
+                    <button type="submit" class="btn-action" style="margin:0;">Учесть</button>
+                </form>
+                <ul id="expenseList"></ul>
+            </div>
+        </div>
+
+        <!-- САЙДБАР OVERVIEW -->
+        <div class="sidebar">
+            <div class="card">
+                <div class="overview-title"><i data-lucide="layout-dashboard"></i>Today's Overview</div>
+                <div class="bento-grid">
+                    <div class="bento-item"><span class="bento-label">Выполнено задач</span><span class="bento-value" id="bentoDoneTasks" style="color:#10b981;">0</span></div>
+                    <div class="bento-item"><span class="bento-label">Осталось задач</span><span class="bento-value" id="bentoLeftTasks" style="color:var(--accent);">0</span></div>
+                    <div class="bento-item bento-full"><span class="bento-label">Активно привычек</span><span class="bento-value" id="bentoHabits" style="color:#a78bfa;">0</span></div>
+                    <div class="bento-item bento-full"><span class="bento-label">Ближайшая задача</span><span class="bento-value" id="bentoNextTask" style="font-size:0.9rem;">Задач нет</span></div>
+                </div>
+                <div class="quote-box">«Маленькие шаги каждый день приводят к большим результатам.»</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+        let allTasks = []; let allHabits = []; let allLogs = []; let allExpenses = [];
+
+        function openModule(moduleName) {
+            document.getElementById('window-hub').classList.add('hidden');
+            document.getElementById(`window-${moduleName}`).classList.add('active');
+            lucide.createIcons();
+        }
+
+        function returnToHub() {
+            document.querySelectorAll('.app-window').forEach(win => win.classList.remove('active'));
+            document.getElementById('window-hub').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        document.getElementById('isSubtask').addEventListener('change', (e) => {
+            document.getElementById('parentTaskId').disabled = !e.target.checked;
+            document.getElementById('parentTaskId').required = e.target.checked;
+        });
+
+        fetch(`${API_URL}/status`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const b = document.getElementById('status'); b.textContent = 'Life OS Connected'; b.classList.add('online');
+                    loadAllData();
+                }
+            }).catch(() => { document.getElementById('status').textContent = 'Режим офлайн'; });
+
+        function loadAllData() {
+            Promise.all([
+                fetch(`${API_URL}/tasks`).then(r => r.json()),
+                fetch(`${API_URL}/habits`).then(r => r.json()),
+                fetch(`${API_URL}/logs`).then(r => r.json()),
+                fetch(`${API_URL}/expenses`).then(r => r.json())
+            ]).then(([tData, hData, lData, eData]) => {
+                allTasks = tData.tasks || []; allHabits = hData.habits || []; allLogs = lData.logs || []; allExpenses = eData.expenses || [];
+                render();
+            });
+        }
+
+        function render() {
+            const parentSelect = document.getElementById('parentTaskId');
+            parentSelect.innerHTML = '<option value="">-- Выберите задачу --</option>';
+            allTasks.filter(t => !t.parentId).forEach(t => {
+                parentSelect.innerHTML += `<option value="${t.id}">${t.text}</option>`;
+            });
+
+            document.getElementById('bentoDoneTasks').textContent = allTasks.filter(t => t.done).length;
+            document.getElementById('bentoLeftTasks').textContent = allTasks.filter(t => !t.done).length;
+            const next = allTasks.find(t => !t.done);
+            document.getElementById('bentoNextTask').textContent = next ? next.text : 'Все цели закрыты!';
+            document.getElementById('bentoHabits').textContent = allHabits.length;
+
+            const tList = document.getElementById('taskList'); tList.innerHTML = '';
+            allTasks.filter(t => !t.parentId).forEach(mt => {
+                appendTaskEl(mt, false, tList);
+                allTasks.filter(st => st.parentId === mt.id).forEach(st => appendTaskEl(st, true, tList));
+            });
+
+            const hList = document.getElementById('habitList'); hList.innerHTML = '';
+            allHabits.forEach(h => { const li = document.createElement('li'); li.textContent = h.title; hList.appendChild(li); });
+
+            const lList = document.getElementById('logList'); lList.innerHTML = '';
+            allLogs.forEach(l => { const li = document.createElement('li'); li.innerHTML = `<div>${l.note}</div><span class="item-time">${l.createdAt || ''}</span>`; lList.appendChild(li); });
+
+            const eList = document.getElementById('expenseList'); eList.innerHTML = '';
+            allExpenses.forEach(exp => { const li = document.createElement('li'); li.innerHTML = `<div class="expense-row"><span>${exp.category}</span><span class="expense-amount">-${Number(exp.amount).toLocaleString('ru-RU')} сум</span></div>`; eList.appendChild(li); });
+
+            lucide.createIcons();
+        }
+
+        function appendTaskEl(task, isSub, container) {
+            const li = document.createElement('li'); if (isSub) li.classList.add('subtask-item');
+            li.innerHTML = `
+                <div class="task-header">
+                    <input type="checkbox" ${task.done ? 'checked' : ''} onclick="toggleTask('${task.id}', ${!task.done})">
+                    <span class="${task.done ? 'completed' : ''}">${task.text}</span>
+                </div>
+                <div style="margin-top:5px;">
+                    <span class="badge">${task.priority || 'medium'}</span><span class="badge">${task.category}</span>
+                </div>
+                ${task.notes ? `<div class="task-notes">${task.notes}</div>` : ''}
+            `;
+            container.appendChild(li);
+        }
+
+        function toggleTask(id, status) {
+            fetch(`${API_URL}/tasks/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ done: status })
+            }).then(() => loadAllData());
+        }
+
+        document.getElementById('todoForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = document.getElementById('taskInput').value.trim();
+            const category = document.getElementById('taskCategory').value;
+            const targetPeriod = document.getElementById('taskPeriod').value;
+            const priority = document.getElementById('taskPriority').value;
+            const notes = document.getElementById('taskNotes').value.trim();
+            const isSub = document.getElementById('isSubtask').checked;
+            const parentId = isSub ? document.getElementById('parentTaskId').value : null;
+
+            fetch(`${API_URL}/tasks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, category, targetPeriod, priority, notes, parentId })
+            }).then(() => {
+                document.getElementById('todoForm').reset();
+                document.getElementById('parentTaskId').disabled = true;
+                loadAllData();
+            });
+        });
+
+        document.getElementById('habitForm').addEventListener('submit', (e) => {
+            e.preventDefault(); const input = document.getElementById('habitInput');
+            fetch(`${API_URL}/habits`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: input.value.trim() }) }).then(() => { input.value = ''; loadAllData(); });
+        });
+
+        document.getElementById('logForm').addEventListener('submit', (e) => {
+            e.preventDefault(); const input = document.getElementById('logInput');
+            fetch(`${API_URL}/logs`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note: input.value.trim() }) }).then(() => { input.value = ''; loadAllData(); });
+        });
+
+        document.getElementById('expenseForm').addEventListener('submit', (e) => {
+            e.preventDefault(); const a = document.getElementById('expenseAmount'); const c = document.getElementById('expenseCategory');
+            fetch(`${API_URL}/expenses`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: parseInt(a.value), category: c.value.trim() }) }).then(() => { a.value = ''; c.value = ''; loadAllData(); });
+        });
+
+        lucide.createIcons();
+    </script>
+</body>
+</html>

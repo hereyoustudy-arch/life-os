@@ -1,0 +1,86 @@
+{
+  "tasks": [
+    {
+      "id": "task_1781686349769",
+      "text": "фвфывфыв",
+      "targetPeriod": "today",
+      "targetDate": "",
+      "isMain": false,
+      "parentId": null,
+      "priority": "medium",
+      "category": "personal",
+      "notes": "",
+      "done": true
+    },
+    {
+      "id": "task_1781686534299",
+      "text": "ustozlarni davomat qilganligini ko'rish",
+      "targetPeriod": "today",
+      "targetDate": "",
+      "isMain": false,
+      "parentId": null,
+      "priority": "high",
+      "category": "Работа",
+      "notes": "",
+      "done": false
+    },
+    {
+      "id": "task_1781686565185",
+      "text": "ustozlar darsga qatnashganligini tekshirish",
+      "targetPeriod": "today",
+      "targetDate": "",
+      "isMain": false,
+      "parentId": null,
+      "priority": "high",
+      "category": "Работа",
+      "notes": "",
+      "done": false
+    },
+    {
+      "id": "task_1781688378820",
+      "text": "ыуззд",
+      "targetPeriod": "tomorrow",
+      "targetDate": "",
+      "isMain": false,
+      "parentId": null,
+      "priority": "medium",
+      "category": "Семья",
+      "notes": "",
+      "done": false
+    },
+    {
+      "id": "task_1781693056005",
+      "text": "monitur tuzatish uchun usta topish kerak 5 ta jadval tuzib",
+      "targetPeriod": "today",
+      "targetDate": "",
+      "isMain": false,
+      "parentId": null,
+      "priority": "medium",
+      "category": "Работа",
+      "notes": "",
+      "done": false
+    },
+    {
+      "id": "task_1781693176636",
+      "text": "mishka va zaryadchik sotib olish uchun moliya jadval kerak",
+      "targetPeriod": "today",
+      "targetDate": "",
+      "isMain": false,
+      "parentId": null,
+      "priority": "medium",
+      "category": "Личное",
+      "notes": "",
+      "done": false
+    }
+  ],
+  "habits": [],
+  "logs": [],
+  "expenses": [
+    {
+      "id": "local_1781685666133",
+      "amount": 28000,
+      "category": "куриный ролл",
+      "createdAt": "17.06.2026, 13:41:05"
+    }
+  ]
+}
