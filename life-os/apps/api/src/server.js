@@ -6,6 +6,9 @@ const PORT = process.env.PORT || 5000;
 const FIREBASE_PROJECT_ID = 'my-life-os-b0878'; 
 const LOCAL_DB_PATH = path.join(__dirname, 'database.json');
 
+// Твой мастер-пароль для входа в систему (можешь изменить на свой)
+const MASTER_PASSWORD = process.env.MASTER_PASSWORD || 'admin';
+
 // Инициализация локального файла со всеми необходимыми коллекциями
 if (!fs.existsSync(LOCAL_DB_PATH)) {
   fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify({ tasks: [], habits: [], logs: [], expenses: [] }, null, 2));
@@ -20,6 +23,7 @@ function writeLocalDB(data) {
 }
 
 const server = http.createServer((req, res) => {
+  // Настройка заголовков CORS для стабильного общения с фронтендом
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PATCH');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -30,14 +34,42 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 1. Статус
+  // ==========================================
+  // АВТОРИЗАЦИЯ: POST /login
+  // ==========================================
+  if (req.url === '/login' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const payload = JSON.parse(body);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        
+        if (payload.password === MASTER_PASSWORD) {
+          res.end(JSON.stringify({ success: true }));
+        } else {
+          res.end(JSON.stringify({ success: false, error: 'Incorrect password' }));
+        }
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Invalid JSON' }));
+      }
+    });
+    return;
+  }
+
+  // ==========================================
+  // СТАТУС СЕРВЕРА
+  // ==========================================
   if (req.url === '/status' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: true, database: 'Life OS Super-Task Engine' }));
     return;
   }
 
-  // 2. ЗАДАЧИ: GET /tasks (Загрузка расширенных задач)
+  // ==========================================
+  // ЗАДАЧИ: GET /tasks
+  // ==========================================
   if (req.url === '/tasks' && req.method === 'GET') {
     const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/tasks`;
     fetch(url)
@@ -62,14 +94,15 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({ success: true, tasks }));
       })
       .catch(() => {
-        // Офлайн режим
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, tasks: readLocalDB().tasks }));
       });
     return;
   }
 
-  // 3. ЗАДАЧИ: POST /tasks (Создание задачи со всеми новыми свойствами)
+  // ==========================================
+  // ЗАДАЧИ: POST /tasks
+  // ==========================================
   if (req.url === '/tasks' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => { body += chunk.toString(); });
@@ -96,12 +129,10 @@ const server = http.createServer((req, res) => {
           done: false
         };
 
-        // Пишем локально
         const localData = readLocalDB();
         localData.tasks.push(newTask);
         writeLocalDB(localData);
 
-        // Пишем в Firebase Firestore
         const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/tasks?documentId=${timestampId}`;
         fetch(url, {
           method: 'POST',
@@ -133,7 +164,9 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 4. ЗАДАЧИ: PATCH /tasks (Обновление статуса "выполнено" или изменение полей)
+  // ==========================================
+  // ЗАДАЧИ: PATCH /tasks/:id
+  // ==========================================
   if (req.url.startsWith('/tasks/') && req.method === 'PATCH') {
     const taskId = req.url.split('/').pop();
     let body = '';
@@ -142,7 +175,6 @@ const server = http.createServer((req, res) => {
       try {
         const updates = JSON.parse(body);
         
-        // Обновляем локально
         const localData = readLocalDB();
         const taskIndex = localData.tasks.findIndex(t => t.id === taskId);
         if (taskIndex !== -1) {
@@ -150,7 +182,6 @@ const server = http.createServer((req, res) => {
           writeLocalDB(localData);
         }
 
-        // Обновляем в Firebase (черех маску обновления fields)
         const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/tasks/${taskId}?updateMask.fieldPaths=done`;
         fetch(url, {
           method: 'PATCH',
@@ -172,7 +203,9 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // --- ОСТАЛЬНЫЕ СТАРЫЕ МОДУЛИ БЕЗ ИЗМЕНЕНИЙ (Привычки, Дневник, Финансы) ---
+  // ==========================================
+  // ПРИВЫЧКИ (HABITS)
+  // ==========================================
   if (req.url === '/habits' && req.method === 'GET') {
     fetch(`https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/habits`)
       .then(r => r.json()).then(d => {
@@ -183,12 +216,19 @@ const server = http.createServer((req, res) => {
   }
   if (req.url === '/habits' && req.method === 'POST') {
     let body = ''; req.on('data', c => body += c); req.on('end', () => {
-      const { title } = JSON.parse(body); const db = readLocalDB(); db.habits.push({ id: 'h_'+Date.now(), title }); writeLocalDB(db);
-      fetch(`https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/habits`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { title: { stringValue: title } } })
-      }).then(() => { res.writeHead(201); res.end(JSON.stringify({ success: true })); }).catch(() => { res.writeHead(201); res.end(JSON.stringify({ success: true })); });
+      try {
+        const { title } = JSON.parse(body); const db = readLocalDB(); db.habits.push({ id: 'h_'+Date.now(), title }); writeLocalDB(db);
+        fetch(`https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/habits`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { title: { stringValue: title } } })
+        }).then(() => { res.writeHead(201, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: true })); })
+          .catch(() => { res.writeHead(201, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: true })); });
+      } catch(e) { res.writeHead(400); res.end(); }
     }); return;
   }
+
+  // ==========================================
+  // ДНЕВНИК (LOGS)
+  // ==========================================
   if (req.url === '/logs' && req.method === 'GET') {
     fetch(`https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/logs`)
       .then(r => r.json()).then(d => {
@@ -199,12 +239,19 @@ const server = http.createServer((req, res) => {
   }
   if (req.url === '/logs' && req.method === 'POST') {
     let body = ''; req.on('data', c => body += c); req.on('end', () => {
-      const { note } = JSON.parse(body); const ts = new Date().toLocaleString('ru-RU'); const db = readLocalDB(); db.logs.push({ id: 'l_'+Date.now(), note, createdAt: ts }); writeLocalDB(db);
-      fetch(`https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/logs`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { note: { stringValue: note }, createdAt: { stringValue: ts } } })
-      }).then(() => { res.writeHead(201); res.end(JSON.stringify({ success: true })); }).catch(() => { res.writeHead(201); res.end(JSON.stringify({ success: true })); });
+      try {
+        const { note } = JSON.parse(body); const ts = new Date().toLocaleString('ru-RU'); const db = readLocalDB(); db.logs.push({ id: 'l_'+Date.now(), note, createdAt: ts }); writeLocalDB(db);
+        fetch(`https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/logs`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { note: { stringValue: note }, createdAt: { stringValue: ts } } })
+        }).then(() => { res.writeHead(201, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: true })); })
+          .catch(() => { res.writeHead(201, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: true })); });
+      } catch(e) { res.writeHead(400); res.end(); }
     }); return;
   }
+
+  // ==========================================
+  // ФИНАНСЫ (EXPENSES)
+  // ==========================================
   if (req.url === '/expenses' && req.method === 'GET') {
     fetch(`https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/expenses`)
       .then(r => r.json()).then(d => {
@@ -215,15 +262,19 @@ const server = http.createServer((req, res) => {
   }
   if (req.url === '/expenses' && req.method === 'POST') {
     let body = ''; req.on('data', c => body += c); req.on('end', () => {
-      const { amount, category } = JSON.parse(body); const ts = new Date().toLocaleString('ru-RU'); const db = readLocalDB(); db.expenses.push({ id: 'e_'+Date.now(), amount, category, createdAt: ts }); writeLocalDB(db);
-      fetch(`https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/expenses`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { amount: { stringValue: String(amount) }, category: { stringValue: category }, createdAt: { stringValue: ts } } })
-      }).then(() => { res.writeHead(201); res.end(JSON.stringify({ success: true })); }).catch(() => { res.writeHead(201); res.end(JSON.stringify({ success: true })); });
+      try {
+        const { amount, category } = JSON.parse(body); const ts = new Date().toLocaleString('ru-RU'); const db = readLocalDB(); db.expenses.push({ id: 'e_'+Date.now(), amount, category, createdAt: ts }); writeLocalDB(db);
+        fetch(`https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/expenses`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { amount: { stringValue: String(amount) }, category: { stringValue: category }, createdAt: { stringValue: ts } } })
+        }).then(() => { res.writeHead(201, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: true })); })
+          .catch(() => { res.writeHead(201, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: true })); });
+      } catch(e) { res.writeHead(400); res.end(); }
     }); return;
   }
 
+  // Если маршрут не найден
   res.writeHead(404, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ success: false }));
+  res.end(JSON.stringify({ success: false, error: 'Not Found' }));
 });
 
 server.listen(PORT, () => {
