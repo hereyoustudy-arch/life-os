@@ -61,9 +61,20 @@ const server = http.createServer((req, res) => {
   // ==========================================
   // СТАТУС СЕРВЕРА
   // ==========================================
-  if (req.url === '/status' && req.method === 'GET') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true, database: 'Life OS Super-Task Engine' }));
+  if ((req.url === '/' || req.url.startsWith('/?')) && req.method === 'GET') {
+    // __dirname — это папка "src". Выходим из неё на один уровень вверх (..) 
+    // и заходим в папку "public", где лежит твой index.html
+    const indexPath = path.join(__dirname, '..', 'public', 'index.html');
+    
+    fs.readFile(indexPath, 'utf8', (err, html) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end(`Ошибка загрузки фронтенда. Сервер искал файл тут: ${indexPath}`);
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    });
     return;
   }
 
